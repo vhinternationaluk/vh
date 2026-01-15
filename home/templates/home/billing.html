@@ -1,0 +1,495 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - VHInternaltional</title>
+    <link rel="stylesheet" href="{% static 'home/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'home/css/billing.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <nav class="navbar">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-home"></i>
+                        <i class="fas fa-pencil-alt"></i>
+                    </div>
+                    <h1>VHInternaltional</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="{% url 'home:index' %}">Home</a></li>
+                    <li><a href="{% url 'home:shop' %}">Shop</a></li>
+                    <li><a href="{% url 'home:about' %}">About</a></li>
+                    <li><a href="{% url 'home:contact' %}">Contact</a></li>
+                </ul>
+                <div class="nav-icons">
+                    <div class="user-menu-wrapper">
+                        <button class="icon-link user-icon-btn" onclick="toggleUserMenu(event)">
+                            <i class="fas fa-user"></i>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            {% if user.is_authenticated %}
+                                {% if user.is_staff or user.is_superuser or user.user_type == 'admin' or user.user_type == 'superadmin' %}
+                                    <div class="user-role-badge">Admin</div>
+                                {% endif %}
+                                <a href="#" class="dropdown-item active">
+                                    <i class="fas fa-user-circle"></i>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="{% url 'home:my-orders' %}" class="dropdown-item">
+                                    <i class="fas fa-box-open"></i>
+                                    <span>My Orders</span>
+                                </a>
+                                {% if user.is_staff or user.is_superuser or user.user_type == 'admin' or user.user_type == 'superadmin' %}
+                                    <a href="{% url 'admin_panel:dashboard' %}" class="dropdown-item">
+                                        <i class="fas fa-shopping-bag"></i>
+                                        <span>Manage Items</span>
+                                    </a>
+                                {% endif %}
+                                <div class="dropdown-divider"></div>
+                                <a href="{% url 'account:signout' %}" class="dropdown-item logout">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Logout</span>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'account:signin' %}" class="dropdown-item">
+                                    <i class="fas fa-sign-in-alt"></i>
+                                    <span>Sign In</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <a href="#" class="icon-link"><i class="fas fa-search"></i></a>
+                    <a href="#" class="icon-link"><i class="far fa-heart"></i></a>
+                    <a href="{% url 'home:cart' %}" class="icon-link cart-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span class="cart-badge" id="cartBadge" style="display: none;">0</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Billing Hero Section -->
+    <section class="billing-hero">
+        <div class="hero-background"></div>
+        <div class="hero-background-overlay"></div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-icon">
+                    <svg width="77" height="77" viewBox="0 0 77 77" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="38.5" cy="38.5" r="38.5" fill="#B88E2F"/>
+                        <path d="M38.5 20L45.5 35H55L42.5 50H34.5L22 35H31.5L38.5 20Z" fill="white"/>
+                    </svg>
+                </div>
+                <div class="hero-text">
+                    <h1 class="hero-title">Billing</h1>
+                    <nav class="breadcrumbs">
+                        <a href="{% url 'home:index' %}">Home</a>
+                        <span class="separator">></span>
+                        <a href="{% url 'home:checkout' %}">Checkout</a>
+                        <span class="separator">></span>
+                        <span class="current">Billing</span>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Billing Section -->
+    <section class="billing-section">
+        <div class="container">
+            <div class="billing-layout">
+                <!-- Order Summary -->
+                <div class="order-summary">
+                    <h2 class="section-title">Product</h2>
+                    <div class="order-items" id="orderItems">
+                        <!-- Order items will be loaded here -->
+                        <div class="loading-message">Loading order summary...</div>
+                    </div>
+                    
+                    <div class="order-totals">
+                        <div class="total-row">
+                            <span class="total-label">Subtotal</span>
+                            <span class="total-value" id="orderSubtotal">Rs. 0.00</span>
+                        </div>
+                        <div class="total-row final-total">
+                            <span class="total-label">Total</span>
+                            <span class="total-value" id="orderTotal">Rs. 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="payment-section">
+                    <h2 class="section-title">Payment Method</h2>
+                    
+                    <div class="payment-options">
+                        <div class="payment-option">
+                            <input type="radio" id="bankTransfer" name="paymentMethod" value="bank_transfer" checked>
+                            <label for="bankTransfer">
+                                <span class="radio-label">Direct Bank Transfer</span>
+                                <p class="payment-description">Make your payment directly into our bank account. Please use your Order ID as the payment reference. Your order will not be shipped until the funds have cleared in our account.</p>
+                            </label>
+                        </div>
+                        <div class="payment-option">
+                            <input type="radio" id="cashOnDelivery" name="paymentMethod" value="cash_on_delivery">
+                            <label for="cashOnDelivery">
+                                <span class="radio-label">Cash On Delivery</span>
+                                <p class="payment-description">Pay with cash when your order is delivered.</p>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Policy -->
+                    <div class="privacy-policy">
+                        <p>Your personal data will be used to support your experience throughout this website, to manage access to your account, and for other purposes described in our <a href="{% url 'home:privacy-policy' %}">privacy policy</a>.</p>
+                    </div>
+
+                    <!-- Make Payment Button -->
+                    <button type="button" class="btn-make-payment" id="makePaymentBtn" onclick="makePayment()">Make Payment</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>High Quality</h3>
+                        <p>crafted from top materials</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Warranty Protection</h3>
+                        <p>Over 2 years</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>Free Shipping</h3>
+                        <p>Order over 150 $</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <div class="feature-content">
+                        <h3>24 / 7 Support</h3>
+                        <p>Dedicated support</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>VHInternaltional</h3>
+                    <p>Asdullapur, Sultanpur Dost, Moradabad<br>
+                        244001, Uttar Pradesh</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="{% url 'home:index' %}">Home</a></li>
+                        <li><a href="{% url 'home:shop' %}">Shop</a></li>
+                        <li><a href="{% url 'home:about' %}">About</a></li>
+                        <li><a href="{% url 'home:contact' %}">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Help</h4>
+                    <ul>
+                        <li><a href="#">Payment Options</a></li>
+                        <li><a href="{% url 'home:return-policy' %}">Returns</a></li>
+                        <li><a href="{% url 'home:privacy-policy' %}">Privacy Policies</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Newsletter</h4>
+                    <form class="newsletter-form">
+                        <input type="email" placeholder="Enter Your Email Address" required>
+                        <button type="submit" class="btn btn-primary">SUBSCRIBE</button>
+                    </form>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>2025 furino. All rights reverved</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // User dropdown toggle
+        function toggleUserMenu(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('userDropdown');
+            const button = document.querySelector('.user-icon-btn');
+            if (dropdown && button && !dropdown.contains(event.target) && !button.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Load cart items for order summary
+        async function loadOrderSummary() {
+            try {
+                const response = await fetch('/api/cart/');
+                const data = await response.json();
+                
+                const orderItems = document.getElementById('orderItems');
+                const orderSubtotal = document.getElementById('orderSubtotal');
+                const orderTotal = document.getElementById('orderTotal');
+                
+                if (data.items && data.items.length > 0) {
+                    orderItems.innerHTML = data.items.map(item => {
+                        const product = item.product;
+                        return `
+                            <div class="order-item">
+                                <span class="item-name">${product.name}${item.size ? ' - ' + item.size : ''}${item.color ? ' - ' + item.color : ''}</span>
+                                <span class="item-quantity">x ${item.quantity}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    const subtotalValue = parseFloat(data.subtotal || 0).toFixed(2);
+                    orderSubtotal.textContent = `Rs. ${parseFloat(subtotalValue).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                    orderTotal.textContent = `Rs. ${parseFloat(subtotalValue).toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                    
+                    // Update cart badge
+                    const totalItems = data.total_items || 0;
+                    const cartBadge = document.getElementById('cartBadge');
+                    if (cartBadge) {
+                        cartBadge.textContent = totalItems;
+                        cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
+                    }
+                } else {
+                    orderItems.innerHTML = '<div class="empty-cart"><p>Your cart is empty</p><a href="{% url "home:shop" %}" class="btn btn-primary">Continue Shopping</a></div>';
+                    orderSubtotal.textContent = 'Rs. 0.00';
+                    orderTotal.textContent = 'Rs. 0.00';
+                    document.getElementById('makePaymentBtn').disabled = true;
+                }
+            } catch (error) {
+                console.error('Error loading order summary:', error);
+                document.getElementById('orderItems').innerHTML = '<div class="error-message">Error loading order summary. Please refresh the page.</div>';
+            }
+        }
+
+        // Make payment / Place order
+        async function makePayment() {
+            {% if not user.is_authenticated %}
+                window.location.href = '{% url "account:signin" %}?next={% url "home:billing" %}';
+                return;
+            {% endif %}
+            
+            // Get billing data from sessionStorage
+            const billingData = JSON.parse(sessionStorage.getItem('billingData') || '{}');
+            
+            if (!billingData.firstName || !billingData.lastName) {
+                alert('Please complete the checkout form first.');
+                window.location.href = '{% url "home:checkout" %}';
+                return;
+            }
+            
+            // Get payment method
+            const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+            
+            // Prepare billing data for order
+            const orderBillingData = {
+                shipping_name: `${billingData.firstName} ${billingData.lastName}`,
+                shipping_address: billingData.streetAddress,
+                shipping_city: billingData.city,
+                shipping_state: billingData.province,
+                shipping_postal_code: billingData.zipCode,
+                shipping_country: billingData.country,
+                shipping_phone: billingData.phone,
+                shipping_cost: 0,
+                tax: 0
+            };
+            
+            // Disable button
+            const btn = document.getElementById('makePaymentBtn');
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            
+            // Handle Cash on Delivery
+            if (paymentMethod === 'cash_on_delivery') {
+                try {
+                    const response = await fetch('/api/orders/create/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify(orderBillingData)
+                    });
+                    
+                    if (response.ok) {
+                        const order = await response.json();
+                        sessionStorage.removeItem('billingData');
+                        window.location.href = `/order/${order.id}/`;
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to place order. Please try again.');
+                        btn.disabled = false;
+                        btn.textContent = 'Make Payment';
+                    }
+                } catch (error) {
+                    console.error('Error placing order:', error);
+                    alert('Error placing order. Please try again.');
+                    btn.disabled = false;
+                    btn.textContent = 'Make Payment';
+                }
+                return;
+            }
+            
+            // Handle Razorpay payment
+            try {
+                // Create Razorpay order
+                const orderResponse = await fetch('/api/payment/razorpay/create-order/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ billing_data: orderBillingData })
+                });
+                
+                if (!orderResponse.ok) {
+                    const error = await orderResponse.json();
+                    alert(error.error || 'Failed to create payment order');
+                    btn.disabled = false;
+                    btn.textContent = 'Make Payment';
+                    return;
+                }
+                
+                const razorpayOrder = await orderResponse.json();
+                
+                // Initialize Razorpay checkout
+                const options = {
+                    key: razorpayOrder.key,
+                    amount: razorpayOrder.amount,
+                    currency: razorpayOrder.currency,
+                    name: 'VHInternaltional',
+                    description: 'Order Payment',
+                    order_id: razorpayOrder.razorpay_order_id,
+                    handler: async function(response) {
+                        // Verify payment
+                        try {
+                            const verifyResponse = await fetch('/api/payment/razorpay/verify/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    billing_data: orderBillingData
+                                })
+                            });
+                            
+                            if (verifyResponse.ok) {
+                                const order = await verifyResponse.json();
+                                sessionStorage.removeItem('billingData');
+                                window.location.href = `/order/${order.id}/`;
+                            } else {
+                                const error = await verifyResponse.json();
+                                alert(error.error || 'Payment verification failed');
+                                btn.disabled = false;
+                                btn.textContent = 'Make Payment';
+                            }
+                        } catch (error) {
+                            console.error('Error verifying payment:', error);
+                            alert('Error verifying payment. Please contact support.');
+                            btn.disabled = false;
+                            btn.textContent = 'Make Payment';
+                        }
+                    },
+                    prefill: {
+                        name: `${billingData.firstName} ${billingData.lastName}`,
+                        email: billingData.email || '',
+                        contact: billingData.phone || ''
+                    },
+                    theme: {
+                        color: '#B88E2F'
+                    },
+                    modal: {
+                        ondismiss: function() {
+                            btn.disabled = false;
+                            btn.textContent = 'Make Payment';
+                        }
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.open();
+                
+            } catch (error) {
+                console.error('Error initiating payment:', error);
+                alert('Error initiating payment. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Make Payment';
+            }
+        }
+
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Check if billing data exists, if not redirect to checkout
+        window.addEventListener('load', function() {
+            const billingData = sessionStorage.getItem('billingData');
+            if (!billingData) {
+                window.location.href = '{% url "home:checkout" %}';
+            }
+        });
+
+        // Load order summary on page load
+        loadOrderSummary();
+    </script>
+</body>
+</html>
+
