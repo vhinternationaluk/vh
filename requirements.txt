@@ -6,3 +6,6 @@ django-storages
 boto3
 
 
+waitress==3.0.2
+whitenoise==6.8.2
+uvicorn
