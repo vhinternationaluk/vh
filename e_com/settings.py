@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-198c=6=@*13jf#j6j1cfk-r7*g+gs4ega0xe0!r@034wd!-1y4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*","https://vh-7yju.onrender.com"]
 
 # Razorpay Settings
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID') #"rzp_test_E9RUW3lWWFhhM7"  # Replace with your Razorpay Key ID
