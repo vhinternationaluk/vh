@@ -4,7 +4,7 @@ razorpay
 Pillow
 django-storages
 boto3
-
+psycopg2==2.9.10
 
 waitress==3.0.2
 whitenoise==6.8.2
